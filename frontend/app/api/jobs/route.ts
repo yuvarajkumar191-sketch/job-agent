@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/jobs - fetch jobs with filters
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
