@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, callAI } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 // POST /api/applications/[id]/materials
 // Generates tailored CV bullets, cover letter, and outreach email using AI
 export async function POST(
