@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, verifyInternalKey } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 // POST /api/jobs/upsert - called by n8n to insert/update jobs
 export async function POST(req: NextRequest) {
   if (!verifyInternalKey(req)) {
