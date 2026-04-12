@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import Link from 'next/link'
 import { Briefcase, LayoutDashboard, FileText, User, Bot } from 'lucide-react'
+import Script from 'next/script'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -18,49 +19,56 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <Script src="https://cdn.tailwindcss.com" strategy="beforeInteractive" />
+      </head>
       <body className={inter.className}>
         <div className="flex h-screen bg-gray-50">
           {/* Sidebar */}
-          <aside className="w-64 bg-gray-900 text-white flex flex-col">
-            <div className="p-6 border-b border-gray-700">
-              <div className="flex items-center gap-2">
-                <Bot className="h-8 w-8 text-blue-400" />
+          <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                  <Bot className="text-white" size={22} />
+                </div>
                 <div>
-                  <h1 className="font-bold text-lg leading-tight">Job Agent</h1>
-                  <p className="text-xs text-gray-400">AI-powered job hunter</p>
+                  <h1 className="font-bold text-gray-900 text-lg">Job Agent</h1>
+                  <p className="text-xs text-gray-500">AI-powered job hunter</p>
                 </div>
               </div>
             </div>
-            <nav className="flex-1 p-4 space-y-1">
-              <NavLink href="/" icon={<LayoutDashboard size={18} />} label="Dashboard" />
-              <NavLink href="/jobs" icon={<Briefcase size={18} />} label="Jobs" />
-              <NavLink href="/applications" icon={<FileText size={18} />} label="Applications" />
-              <NavLink href="/profile" icon={<User size={18} />} label="My Profile" />
-            </nav>
-            <div className="p-4 border-t border-gray-700">
-              <p className="text-xs text-gray-500">Yuvaraj Kumar</p>
-              <p className="text-xs text-gray-600">MBA Finance & Analytics</p>
-              <p className="text-xs text-gray-600">Hult Business School, London</p>
+            <div className="p-4 border-b border-gray-100">
+              <div className="bg-blue-50 rounded-lg p-3">
+                <p className="font-semibold text-gray-800 text-sm">Yuvaraj Kumar</p>
+                <p className="text-xs text-gray-500">MBA Finance &amp; Analytics</p>
+                <p className="text-xs text-blue-600">Hult Business School, London</p>
+              </div>
             </div>
+            <nav className="flex-1 p-4 space-y-1">
+              <Link href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors text-sm font-medium">
+                <LayoutDashboard size={18} />
+                Dashboard
+              </Link>
+              <Link href="/jobs" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors text-sm font-medium">
+                <Briefcase size={18} />
+                Jobs
+              </Link>
+              <Link href="/applications" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors text-sm font-medium">
+                <FileText size={18} />
+                Applications
+              </Link>
+              <Link href="/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors text-sm font-medium">
+                <User size={18} />
+                My Profile
+              </Link>
+            </nav>
           </aside>
           {/* Main content */}
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-y-auto">
             {children}
           </main>
         </div>
       </body>
     </html>
-  )
-}
-
-function NavLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
-    >
-      {icon}
-      <span className="text-sm font-medium">{label}</span>
-    </Link>
   )
 }
