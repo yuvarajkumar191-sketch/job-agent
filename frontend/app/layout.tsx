@@ -3,7 +3,6 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import Link from 'next/link'
 import { Briefcase, LayoutDashboard, FileText, User, Bot } from 'lucide-react'
-import Script from 'next/script'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -20,11 +19,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <Script src="https://cdn.tailwindcss.com" strategy="beforeInteractive" />
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="https://cdn.tailwindcss.com"></script>
       </head>
       <body className={inter.className}>
         <div className="flex h-screen bg-gray-50">
-          {/* Sidebar */}
           <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm">
             <div className="p-6 border-b border-gray-100">
               <div className="flex items-center gap-3">
@@ -63,7 +62,6 @@ export default function RootLayout({
               </Link>
             </nav>
           </aside>
-          {/* Main content */}
           <main className="flex-1 overflow-y-auto">
             {children}
           </main>
