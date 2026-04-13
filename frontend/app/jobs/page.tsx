@@ -1,5 +1,6 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Search, Shield, Eye, EyeOff, ExternalLink, Plus, CheckCircle, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -17,13 +18,17 @@ interface Job {
   apply_url: string
 }
 
-export default function JobsPage() {
+function JobsContent() {
+  const searchParams = useSearchParams()
   const [jobs, setJobs] = useState([] as Job[])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [minScore, setMinScore] = useState(90)
-  const [visaOnly, setVisaOnly] = useState(false)
+  const [minScore, setMinScore] = useState(() => {
+    const s = searchParams.get('min_score')
+    return s !== null ? parseInt(s) : 90
+  })
+  const [visaOnly, setVisaOnly] = useState(() => searchParams.get('visa_only') === 'true')
   const [hideUK, setHideUK] = useState(false)
   const [applying, setApplying] = useState('')
   const [applied, setApplied] = useState([] as string[])
@@ -52,7 +57,7 @@ export default function JobsPage() {
       await fetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: job.id, user_id: 'default' })
+        body: JSON.stringify({ job_id: job.id })
       })
       setApplied(prev => [...prev, job.id])
       const applyUrl = job.apply_url || job.url
@@ -75,7 +80,6 @@ export default function JobsPage() {
           <CheckCircle className="w-4 h-4" /> My Applications
         </Link>
       </div>
-
       <div className="mb-4 flex flex-wrap gap-3 items-center bg-white p-4 rounded-xl shadow-sm border">
         <div className="flex items-center gap-2 flex-1 min-w-48">
           <Search className="w-4 h-4 text-gray-400" />
@@ -93,7 +97,6 @@ export default function JobsPage() {
           {hideUK ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />} Hide UK-exp required
         </button>
       </div>
-
       {loading ? (
         <div className="flex items-center justify-center py-20 text-gray-400">
           <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading jobs...
@@ -155,6 +158,14 @@ export default function JobsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function JobsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-gray-400">Loading...</div>}>
+      <JobsContent />
+    </Suspense>
   )
 }
 
