@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin, callAI } from '@/lib/db'
+import { supabaseAdmin } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,8 +11,15 @@ export async function GET(req: NextRequest) {
   let query = supabaseAdmin
     .from('applications')
     .select(`
-      *,
-      job:jobs(id, title, company, location, url, fit_score, visa_sponsorship_detected)
+      id,
+      status,
+      created_at,
+      applied_at,
+      notes,
+      cover_letter,
+      tailored_resume,
+      job_id,
+      job:jobs(id, title, company, location, apply_url, fit_score, visa_sponsorship_detected)
     `)
     .order('created_at', { ascending: false })
 
@@ -20,17 +27,16 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  return NextResponse.json({ applications: data })
+  return NextResponse.json({ applications: data ?? [] })
 }
 
 // POST /api/applications - create a new application
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { job_id, user_id } = body
+  const { job_id } = body
 
-  if (!job_id || !user_id) {
-    return NextResponse.json({ error: 'job_id and user_id are required' }, { status: 400 })
+  if (!job_id) {
+    return NextResponse.json({ error: 'job_id is required' }, { status: 400 })
   }
 
   // Check if application already exists
@@ -38,8 +44,7 @@ export async function POST(req: NextRequest) {
     .from('applications')
     .select('id')
     .eq('job_id', job_id)
-    .eq('user_id', user_id)
-    .single()
+    .maybeSingle()
 
   if (existing) {
     return NextResponse.json({ application_id: existing.id, already_exists: true })
@@ -47,11 +52,14 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('applications')
-    .insert({ job_id, user_id, status: 'new' })
+    .insert({
+      job_id,
+      status: 'applied',
+      applied_at: new Date().toISOString(),
+    })
     .select('id')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
   return NextResponse.json({ application_id: data?.id })
 }
