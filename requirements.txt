@@ -3,3 +3,4 @@ feedparser
 beautifulsoup4
 notion-client
 python-dotenv
+groq
