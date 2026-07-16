@@ -24,9 +24,8 @@ Education: MBA Finance & Analytics (STEM), Hult International Business School Lo
 Previous: Credit Underwriter at HDFC Bank India - managed retail and agricultural loan portfolio of 400 crores.
 Skills: Credit risk analysis, financial modelling, Python, SQL, Power BI, Tableau, Excel.
 Looking for: Entry-level or graduate roles in credit risk, underwriting, banking, financial analysis, fintech.
-Needs: UK visa sponsorship (Skilled Worker route).
-Preferred location: London, open to remote/hybrid UK roles.
-Target salary: 35000-55000 GBP.
+Open to: UK (visa sponsorship needed), Netherlands (work permit), Singapore (work pass).
+Target salary: 35000-55000 GBP or equivalent.
 """
 
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
@@ -96,7 +95,7 @@ SPONSOR: [YES/NO/UNKNOWN]"""
 
 STRONG = ["underwriter","underwriting","credit risk","credit analyst","mortgage","lending","risk analyst","financial analyst","banking","graduate scheme","entry level","associate","fintech","insurance"]
 WEAK = ["senior","head of","director","vp ","vice president","managing director","partner","principal","chief"]
-SPONSOR_KW = ["visa sponsorship","sponsorship available","skilled worker","tier 2","certificate of sponsorship"]
+SPONSOR_KW = ["visa sponsorship","sponsorship available","skilled worker","tier 2","certificate of sponsorship","work permit","relocation","work pass"]
 
 def fallback_score(title, desc):
     text = (title+" "+desc).lower()
@@ -105,8 +104,8 @@ def fallback_score(title, desc):
     if strong: score += min(len(strong)*2,6); reasons.append("Relevant: "+", ".join(strong[:3]))
     weak = [k for k in WEAK if k in text]
     if weak: score -= 3; reasons.append("Senior: "+", ".join(weak[:2]))
-    if any(k in text for k in SPONSOR_KW): score += 2; reasons.append("Mentions sponsorship")
-    if any(k in text for k in ["london","remote","hybrid"]): score += 1; reasons.append("Good location")
+    if any(k in text for k in SPONSOR_KW): score += 2; reasons.append("Mentions sponsorship/relocation")
+    if any(k in text for k in ["london","remote","hybrid","amsterdam","singapore"]): score += 1; reasons.append("Good location")
     sponsor = "Likely" if any(k in text for k in SPONSOR_KW) else "Unknown"
     return max(0,min(score,10)), "; ".join(reasons) or "No match", sponsor
 
@@ -151,18 +150,19 @@ def scrape_cv_library():
         except: pass
     return jobs
 
-def scrape_adzuna():
+def scrape_adzuna(country, location_label):
     if not ADZUNA_APP_ID: return []
+    queries = ["underwriter","credit risk analyst","credit analyst","graduate scheme banking","mortgage underwriter"]
     jobs = []
-    for q in ["underwriter london","credit risk analyst london","credit analyst banking london","graduate scheme banking finance","mortgage underwriter london"]:
+    for q in queries:
         try:
-            r = requests.get("https://api.adzuna.com/v1/api/jobs/gb/search/1",
-                params={"app_id":ADZUNA_APP_ID,"app_key":ADZUNA_APP_KEY,"results_per_page":20,"what":q,"where":"London","distance":30,"content-type":"application/json","sort_by":"date"},timeout=15)
+            r = requests.get(f"https://api.adzuna.com/v1/api/jobs/{country}/search/1",
+                params={"app_id":ADZUNA_APP_ID,"app_key":ADZUNA_APP_KEY,"results_per_page":20,"what":q,"content-type":"application/json","sort_by":"date"},timeout=15)
             r.raise_for_status()
             for j in r.json().get("results",[]):
                 smin,smax = j.get("salary_min"),j.get("salary_max")
-                jobs.append((j.get("title",""),j.get("company",{}).get("display_name","Unknown"),j.get("location",{}).get("display_name","London"),j.get("redirect_url",""),j.get("description",""),"Adzuna",f"£{int(smin):,}-£{int(smax):,}" if smin and smax else ""))
-        except Exception as ex: print(f"Adzuna error: {ex}")
+                jobs.append((j.get("title",""),j.get("company",{}).get("display_name","Unknown"),j.get("location",{}).get("display_name",location_label),j.get("redirect_url",""),j.get("description",""),f"Adzuna-{country.upper()}",f"£{int(smin):,}-£{int(smax):,}" if smin and smax else ""))
+        except Exception as ex: print(f"Adzuna {country} error: {ex}")
     return jobs
 
 def scrape_efinancialcareers():
@@ -189,21 +189,27 @@ def run():
     added = skipped = 0
     all_jobs = []
     load_sponsor_register()
-    print("Scraping Reed...");              all_jobs += scrape_reed()
-    print("Scraping CV-Library...");        all_jobs += scrape_cv_library()
-    print("Scraping Adzuna...");            all_jobs += scrape_adzuna()
-    print("Scraping eFinancialCareers..."); all_jobs += scrape_efinancialcareers()
+
+    print("Scraping Reed (UK)...");            all_jobs += scrape_reed()
+    print("Scraping CV-Library (UK)...");      all_jobs += scrape_cv_library()
+    print("Scraping Adzuna UK...");            all_jobs += scrape_adzuna("gb", "United Kingdom")
+    print("Scraping Adzuna Netherlands...");   all_jobs += scrape_adzuna("nl", "Netherlands")
+    print("Scraping Adzuna Singapore...");     all_jobs += scrape_adzuna("sg", "Singapore")
+    print("Scraping eFinancialCareers...");    all_jobs += scrape_efinancialcareers()
+
     seen, unique = set(), []
     for job in all_jobs:
         if job[3] and job[3] not in seen:
             seen.add(job[3]); unique.append(job)
+
     print(f"\nTotal unique jobs: {len(unique)}")
     print(f"Scoring: {'Groq LLaMA AI' if groq_client else 'fallback'}")
     print("="*60)
+
     for job in unique:
         title, company, location, url, desc, source = job[:6]
         salary = job[6] if len(job) > 6 else ""
-        print(f"Processing: {title} at {company}")
+        print(f"Processing: {title} at {company} [{source}]")
         score, reason, llm_sponsor = llm_score(title, company, desc)
         ho_sponsor = check_sponsor(company)
         final_sponsor = "Confirmed" if ho_sponsor == "Confirmed" else ("Likely" if llm_sponsor == "Likely" or ho_sponsor == "Likely" else "Unknown")
@@ -211,9 +217,10 @@ def run():
         if score < MIN_SCORE:
             print(f"  Too low, skipping"); skipped += 1; continue
         if add_to_notion(title, company, location, url, score, reason, source, salary, final_sponsor):
-            print(f"  Added [{source}]"); added += 1
+            print(f"  Added!"); added += 1
         else:
             print(f"  Already exists"); skipped += 1
+
     print("="*60)
     print(f"Run complete. Added: {added} | Skipped: {skipped}")
 
