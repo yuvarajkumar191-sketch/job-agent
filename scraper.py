@@ -64,15 +64,17 @@ def check_sponsor(company_name):
 def llm_score(title, company, description):
     if not groq_client: return fallback_score(title, description)
     try:
-        prompt = f"""Score this job 1-10 for this candidate:
-CV: {CV_SUMMARY}
-Job Title: {title}
-Company: {company}
-Description: {description[:1000]}
-Reply ONLY in this format:
-SCORE: [1-10]
-REASON: [max 150 chars]
-SPONSOR: [YES/NO/UNKNOWN]"""
+        prompt = (
+            f"Score this job 1-10 for this candidate:\n"
+            f"CV: {CV_SUMMARY}\n"
+            f"Job Title: {title}\n"
+            f"Company: {company}\n"
+            f"Description: {description[:1000]}\n"
+            "Reply ONLY in this format:\n"
+            "SCORE: [1-10]\n"
+            "REASON: [max 150 chars]\n"
+            "SPONSOR: [YES/NO/UNKNOWN]"
+        )
         response = groq_client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[{"role":"user","content":prompt}],
