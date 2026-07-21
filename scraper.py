@@ -109,13 +109,24 @@ def fallback_score(title, desc):
     sponsor = "Likely" if any(k in text for k in SPONSOR_KW) else "Unknown"
     return max(0,min(score,10)), "; ".join(reasons) or "No match", sponsor
 
-def already_exists(url):
+def already_exists(url, title="", company=""):
+    # Check by URL
     r = requests.post(f"https://api.notion.com/v1/databases/{DATABASE_ID}/query",
         headers=NOTION_HEADERS, json={"filter":{"property":"URL","url":{"equals":url}}})
-    return len(r.json().get("results",[])) > 0
+    if len(r.json().get("results",[])) > 0: return True
+    # Check by title+company
+    if title and company:
+        r2 = requests.post(f"https://api.notion.com/v1/databases/{DATABASE_ID}/query",
+            headers=NOTION_HEADERS,
+            json={"filter":{"and":[
+                {"property":"Job Title","title":{"equals":title}},
+                {"property":"company","rich_text":{"equals":company}}
+            ]}})
+        if len(r2.json().get("results",[])) > 0: return True
+    return False
 
 def add_to_notion(title, company, location, url, score, reason, source, salary="", sponsor="Unknown"):
-    if already_exists(url): return False
+    if already_exists(url, title, company): return False
     r = requests.post("https://api.notion.com/v1/pages", headers=NOTION_HEADERS,
         json={"parent":{"database_id":DATABASE_ID},"properties":{
             "Job Title":{"title":[{"text":{"content":title[:200]}}]},
@@ -197,10 +208,11 @@ def run():
     print("Scraping Adzuna Singapore...");     all_jobs += scrape_adzuna("sg", "Singapore")
     print("Scraping eFinancialCareers...");    all_jobs += scrape_efinancialcareers()
 
-    seen, unique = set(), []
+    seen_batch, unique = set(), []
     for job in all_jobs:
-        if job[3] and job[3] not in seen:
-            seen.add(job[3]); unique.append(job)
+        key = f"{job[0].lower().strip()}|{job[1].lower().strip()}"
+        if job[3] and key not in seen_batch:
+            seen_batch.add(key); unique.append(job)
 
     print(f"\nTotal unique jobs: {len(unique)}")
     print(f"Scoring: {'Groq LLaMA AI' if groq_client else 'fallback'}")
