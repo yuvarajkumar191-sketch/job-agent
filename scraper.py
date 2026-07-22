@@ -95,21 +95,96 @@ def llm_score(title, company, description):
         print(f"  LLM error: {e}")
         return fallback_score(title, description)
 
-STRONG = ["underwriter","underwriting","credit risk","credit analyst","mortgage","lending","risk analyst","financial analyst","banking","graduate scheme","entry level","associate","fintech","insurance"]
-WEAK = ["senior","head of","director","vp ","vice president","managing director","partner","principal","chief"]
-SPONSOR_KW = ["visa sponsorship","sponsorship available","skilled worker","tier 2","certificate of sponsorship","work permit","relocation","work pass"]
+TARGET_INCLUDE = {
+    "domain": [
+        "mortgage","secured lending","specialist lending","bridging","development finance",
+        "buy-to-let","btl","sme lending","business lending","credit underwriting",
+        "portfolio monitoring","credit risk","credit analyst","risk analyst","ifrs 9",
+        "collections strategy","underwriter","underwriting","lending"
+    ],
+    "titles": [
+        "underwriter","senior underwriter","mortgage underwriter","credit analyst",
+        "credit risk analyst","portfolio analyst","assistant manager","manager"
+    ],
+    "locations": ["london","remote","hybrid","uk"]
+}
+
+TARGET_EXCLUDE = [
+    "insurance","reinsurance","lloyd","lloyd's","catastrophe","exposure management",
+    "claims","marine","energy underwriting","product manager","product lead",
+    "product owner","ratings","rating analyst","leveraged finance","leveraged loans",
+    "syndicated loans","private credit","direct lending","high yield","clo",
+    "investment banking","debt capital markets","equity capital markets"
+]
+
+SENIOR_EXCLUDE = [
+    "vp ","vice president","avp","director","executive director","head of",
+    "managing director","principal","chief","lead"
+]
+
+EXPERIENCE_EXCLUDE = [
+    "8+ years","8 years","9+ years","10+ years","10 years","12+ years","15+ years",
+    "senior leader","technical authority"
+]
+
+SPONSOR_KW = [
+    "visa sponsorship","sponsorship available","skilled worker","tier 2",
+    "certificate of sponsorship","work permit","relocation","work pass"
+]
 
 def fallback_score(title, desc):
-    text = (title+" "+desc).lower()
-    score, reasons = 0, []
-    strong = [k for k in STRONG if k in text]
-    if strong: score += min(len(strong)*2,6); reasons.append("Relevant: "+", ".join(strong[:3]))
-    weak = [k for k in WEAK if k in text]
-    if weak: score -= 3; reasons.append("Senior: "+", ".join(weak[:2]))
-    if any(k in text for k in SPONSOR_KW): score += 2; reasons.append("Mentions sponsorship/relocation")
-    if any(k in text for k in ["london","remote","hybrid","amsterdam","singapore"]): score += 1; reasons.append("Good location")
-    sponsor = "Likely" if any(k in text for k in SPONSOR_KW) else "Unknown"
-    return max(0,min(score,10)), "; ".join(reasons) or "No match", sponsor
+    text = (title + " " + desc).lower()
+
+    score = 0
+    reasons = []
+
+    domain_hits = [k for k in TARGET_INCLUDE["domain"] if k in text]
+    title_hits = [k for k in TARGET_INCLUDE["titles"] if k in text]
+    location_hits = [k for k in TARGET_INCLUDE["locations"] if k in text]
+    exclude_hits = [k for k in TARGET_EXCLUDE if k in text]
+    senior_hits = [k for k in SENIOR_EXCLUDE if k in text]
+    exp_hits = [k for k in EXPERIENCE_EXCLUDE if k in text]
+    sponsor_hits = [k for k in SPONSOR_KW if k in text]
+
+    if domain_hits:
+        score += min(4, len(domain_hits))
+        reasons.append("Domain fit: " + ", ".join(domain_hits[:3]))
+
+    if title_hits:
+        score += min(2, len(title_hits))
+        reasons.append("Title fit: " + ", ".join(title_hits[:2]))
+
+    if any(k in text for k in ["sql","python","power bi","tableau","excel","ifrs 9","portfolio","mi "]):
+        score += 1
+        reasons.append("Relevant analytics skills")
+
+    if location_hits:
+        score += 1
+        reasons.append("UK location fit")
+
+    if sponsor_hits:
+        score += 1
+        reasons.append("Mentions sponsorship/relocation")
+
+    if exclude_hits:
+        score -= 4
+        reasons.append("Excluded domain: " + ", ".join(exclude_hits[:2]))
+
+    if senior_hits:
+        score -= 3
+        reasons.append("Too senior: " + ", ".join(senior_hits[:2]))
+
+    if exp_hits:
+        score -= 3
+        reasons.append("Experience too high")
+
+    sponsor = "Likely" if sponsor_hits else "Unknown"
+
+    if not domain_hits and not title_hits:
+        score = min(score, 2)
+        reasons.append("Weak lending fit")
+
+    return max(0, min(score, 10)), "; ".join(reasons) or "No match", sponsor
 
 def already_exists(url, title="", company=""):
     # Check by URL
@@ -165,7 +240,7 @@ def scrape_cv_library():
 
 def scrape_adzuna(country, location_label):
     if not ADZUNA_APP_ID: return []
-    queries = ["underwriter","credit risk analyst","credit analyst","graduate scheme banking","mortgage underwriter"]
+    queries = ["mortgage underwriter","secured lending underwriter","bridging finance underwriter","development finance underwriter","credit risk analyst","portfolio analyst","sme credit analyst","business lending underwriter"]
     jobs = []
     for q in queries:
         try:
@@ -198,7 +273,7 @@ def scrape_efinancialcareers():
     return jobs
 
 def run():
-    MIN_SCORE = 4
+    MIN_SCORE = 6
     added = skipped = 0
     all_jobs = []
     load_sponsor_register()
