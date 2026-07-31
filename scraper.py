@@ -19,13 +19,17 @@ NOTION_HEADERS = {
 }
 
 CV_SUMMARY = """
-Candidate: Shanmuka Bangari
-Education: MBA Finance & Analytics (STEM), Hult International Business School London (graduating August 2026)
-Previous: Credit Underwriter at HDFC Bank India - managed retail and agricultural loan portfolio of 400 crores.
-Skills: Credit risk analysis, financial modelling, Python, SQL, Power BI, Tableau, Excel.
-Looking for: Entry-level or graduate roles in credit risk, underwriting, banking, financial analysis, fintech.
-Open to: UK (visa sponsorship needed), Netherlands (work permit), Singapore (work pass).
-Target salary: 35000-55000 GBP or equivalent.
+Candidate: Shanmuka Sai Bangari
+Location: London, UK
+Profile: Credit Underwriter and Credit Risk Professional with 4 years of experience in secured and unsecured lending.
+Current focus: MBA in Finance & Analytics at Hult International Business School, London (expected Aug 2026).
+Experience: HDFC Bank Credit Manager - Underwriting, Retail Agri, Karimnagar Hub (Oct 2021 - Aug 2025).
+Key strengths: Manual credit underwriting, credit decisioning, affordability assessment, bureau and bank statement analysis, CAM preparation, collateral review, policy exceptions, portfolio monitoring, audit governance.
+Achievement highlights: Underwrote 2,300+ proposals, managed a INR 4.0 billion portfolio, maintained NPA ratio below 1%, completed 900+ site visits, handled 16 audit/compliance reviews with zero discrepancies.
+Additional experience: ESG & Sustainability Intern at Zureli and Finance Intern at GoSaveSum in the UK.
+Target roles: Credit underwriting, credit risk, banking, financial analysis, secured and unsecured lending, fintech.
+Tools and skills: Excel, Word, PowerPoint, foundational SQL and Python, LaserSoft, FinnOne, Oracle FLEXCUBE.
+Languages: English, Telugu, Hindi, Marathi.
 """
 
 groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
@@ -65,11 +69,33 @@ def llm_score(title, company, description):
     if not groq_client: return fallback_score(title, description)
     try:
         prompt = (
-            f"Score this job 1-10 for this candidate:\n"
-            f"CV: {CV_SUMMARY}\n"
+            f"Score each job strictly for this candidate using the CV summary.\n\n"
+            f"Candidate profile:\n"
+            f"- Credit Underwriter / Credit Risk Professional\n"
+            f"- 4 years of experience in manual credit underwriting at HDFC Bank\n"
+            f"- Strong in secured and unsecured lending, credit decisioning, affordability analysis, bureau/bank statement analysis, CAM preparation, collateral review, policy exceptions, portfolio monitoring, and audit governance\n"
+            f"- Location: UK\n"
+            f"- Target roles: credit underwriting, credit risk, credit analyst, banking, lending, financial services, fintech lending\n\n"
+            f"Scoring rules:\n"
+            f"1. Core role match (35 points)\n"
+            f"2. Experience match (25 points)\n"
+            f"3. Domain relevance (15 points)\n"
+            f"4. Seniority match (10 points)\n"
+            f"5. Location and visa fit (10 points)\n"
+            f"6. Skill signal match (5 points)\n\n"
+            f"Penalties:\n"
+            f"- Subtract heavily for software engineering, coding, sales, marketing, or unrelated roles\n"
+            f"- Subtract for jobs that require 5+ years in a different domain\n"
+            f"- Subtract for jobs outside finance/credit/banking\n"
+            f"- Subtract for roles outside the UK unless sponsorship is realistic\n\n"
+            f"Score bands:\n"
+            f"- 85-100 = strong match, apply immediately\n"
+            f"- 70-84 = good match, apply\n"
+            f"- 55-69 = borderline, review manually\n"
+            f"- Below 55 = skip\n\n"
             f"Job Title: {title}\n"
             f"Company: {company}\n"
-            f"Description: {description[:1000]}\n"
+            f"Description: {description[:1000]}\n\n"
             "Reply ONLY in this format:\n"
             "SCORE: [1-10]\n"
             "REASON: [max 150 chars]\n"
@@ -273,7 +299,7 @@ def scrape_efinancialcareers():
     return jobs
 
 def run():
-    MIN_SCORE = 6
+    MIN_SCORE = 7
     added = skipped = 0
     all_jobs = []
     load_sponsor_register()
